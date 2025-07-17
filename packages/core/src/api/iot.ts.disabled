@@ -1,0 +1,329 @@
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { z } from 'zod';
+import { iotService } from '../services/iot.js';
+
+// Simple logger
+const logger = {
+  info: (...args: any[]) => console.log('[INFO]', ...args),
+  error: (...args: any[]) => console.error('[ERROR]', ...args),
+  warn: (...args: any[]) => console.warn('[WARN]', ...args),
+  debug: (...args: any[]) => console.debug('[DEBUG]', ...args),
+};
+
+// Authentication middleware function  
+const authenticate = async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    await request.jwtVerify();
+  } catch (err) {
+    reply.status(401).send({ success: false, error: 'Unauthorized' });
+  }
+};
+
+// Request schemas
+const DeviceIdSchema = z.object({
+  deviceId: z.string().min(1)
+});
+
+const RegisterDeviceSchema = z.object({
+  name: z.string().min(1),
+  type: z.string().min(1),
+  description: z.string().optional(),
+  location: z.object({
+    latitude: z.number(),
+    longitude: z.number(),
+    address: z.string().optional()
+  }).optional(),
+  metadata: z.record(z.any()).optional()
+});
+
+const SendCommandSchema = z.object({
+  command: z.string().min(1),
+  parameters: z.record(z.any()).optional().default({})
+});
+
+const QuerySensorDataSchema = z.object({
+  sensorType: z.string().optional(),
+  startTime: z.string().datetime().optional(),
+  endTime: z.string().datetime().optional(),
+  limit: z.number().int().positive().optional().default(100)
+});
+
+interface AuthenticatedRequest extends FastifyRequest {
+  user: any;
+}
+
+export async function iotRoutes(fastify: FastifyInstance) {
+  // Authentication middleware
+  fastify.addHook('preHandler', authenticate);
+
+  // Get all IoT devices
+  fastify.get('/devices', async (_request: AuthenticatedRequest, reply: FastifyReply) => {
+    try {
+      const devices = await iotService.getDevices();
+      
+      reply.send({
+        success: true,
+        data: devices,
+        total: devices.length
+      });
+    } catch (error) {
+      logger.error('Error fetching IoT devices:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'Failed to fetch devices'
+      });
+    }
+  });
+
+  // Get specific device details
+  fastify.get('/devices/:deviceId', async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    try {
+      const { deviceId } = DeviceIdSchema.parse(request.params);
+      const device = await iotService.getDevice(deviceId);
+      
+      if (!device) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Device not found'
+        });
+      }
+
+      reply.send({
+        success: true,
+        data: device
+      });
+    } catch (error) {
+      logger.error('Error fetching device details:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'Failed to fetch device details'
+      });
+    }
+  });
+
+  // Register a new IoT device
+  fastify.post('/devices', async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    try {
+      const deviceData = RegisterDeviceSchema.parse(request.body);
+      const device = await iotService.registerDevice(deviceData);
+      
+      reply.status(201).send({
+        success: true,
+        data: device,
+        message: 'Device registered successfully'
+      });
+    } catch (error) {
+      logger.error('Error registering device:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'Failed to register device'
+      });
+    }
+  });
+
+  // Update device information
+  fastify.put('/devices/:deviceId', async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    try {
+      const { deviceId } = DeviceIdSchema.parse(request.params);
+      const updateData = RegisterDeviceSchema.partial().parse(request.body);
+      
+      const device = await iotService.updateDevice(deviceId, updateData);
+      
+      if (!device) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Device not found'
+        });
+      }
+
+      reply.send({
+        success: true,
+        data: device,
+        message: 'Device updated successfully'
+      });
+    } catch (error) {
+      logger.error('Error updating device:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'Failed to update device'
+      });
+    }
+  });
+
+  // Remove a device
+  fastify.delete('/devices/:deviceId', async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    try {
+      const { deviceId } = DeviceIdSchema.parse(request.params);
+      const success = await iotService.removeDevice(deviceId);
+      
+      if (!success) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Device not found'
+        });
+      }
+
+      reply.send({
+        success: true,
+        message: 'Device removed successfully'
+      });
+    } catch (error) {
+      logger.error('Error removing device:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'Failed to remove device'
+      });
+    }
+  });
+
+  // Send command to device
+  fastify.post('/devices/:deviceId/commands', async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    try {
+      const { deviceId } = DeviceIdSchema.parse(request.params);
+      const { command, parameters } = SendCommandSchema.parse(request.body);
+      
+      const success = await iotService.sendCommand(deviceId, command, parameters);
+      
+      if (!success) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Failed to send command - device may be offline'
+        });
+      }
+
+      reply.send({
+        success: true,
+        message: 'Command sent successfully'
+      });
+    } catch (error) {
+      logger.error('Error sending command:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'Failed to send command'
+      });
+    }
+  });
+
+  // Get device sensor data
+  fastify.get('/devices/:deviceId/sensor-data', async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    try {
+      const { deviceId } = DeviceIdSchema.parse(request.params);
+      const query = QuerySensorDataSchema.parse(request.query);
+      
+      const sensorData = await iotService.getSensorData(
+        deviceId,
+        query.sensorType,
+        query.startTime ? new Date(query.startTime) : undefined,
+        query.endTime ? new Date(query.endTime) : undefined,
+        query.limit
+      );
+      
+      reply.send({
+        success: true,
+        data: sensorData,
+        total: sensorData.length
+      });
+    } catch (error) {
+      logger.error('Error fetching sensor data:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'Failed to fetch sensor data'
+      });
+    }
+  });
+
+  // Get aggregated sensor data analytics
+  fastify.get('/devices/:deviceId/analytics', async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    try {
+      const { deviceId } = DeviceIdSchema.parse(request.params);
+      const query = QuerySensorDataSchema.parse(request.query);
+      
+      const analytics = await iotService.getAnalytics(
+        deviceId,
+        query.sensorType,
+        query.startTime ? new Date(query.startTime) : undefined,
+        query.endTime ? new Date(query.endTime) : undefined
+      );
+      
+      reply.send({
+        success: true,
+        data: analytics
+      });
+    } catch (error) {
+      logger.error('Error fetching analytics:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'Failed to fetch analytics'
+      });
+    }
+  });
+
+  // Get IoT service connection status
+  fastify.get('/status', async (_request: AuthenticatedRequest, reply: FastifyReply) => {
+    try {
+      const isConnected = iotService.isConnected();
+      const devices = await iotService.getDevices();
+      const onlineDevices = devices.filter(device => {
+        const lastSeen = new Date(device.lastSeen);
+        const now = new Date();
+        const timeDiff = now.getTime() - lastSeen.getTime();
+        return timeDiff < 5 * 60 * 1000; // Consider online if seen within 5 minutes
+      });
+
+      reply.send({
+        success: true,
+        data: {
+          mqttConnected: isConnected,
+          totalDevices: devices.length,
+          onlineDevices: onlineDevices.length,
+          offlineDevices: devices.length - onlineDevices.length,
+          uptime: process.uptime()
+        }
+      });
+    } catch (error) {
+      logger.error('Error fetching IoT status:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'Failed to fetch IoT status'
+      });
+    }
+  });
+
+  // Start device discovery
+  fastify.post('/discovery/start', async (_request: AuthenticatedRequest, reply: FastifyReply) => {
+    try {
+      await iotService.startDiscovery();
+      
+      reply.send({
+        success: true,
+        message: 'Device discovery started'
+      });
+    } catch (error) {
+      logger.error('Error starting discovery:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'Failed to start discovery'
+      });
+    }
+  });
+
+  // Stop device discovery
+  fastify.post('/discovery/stop', async (_request: AuthenticatedRequest, reply: FastifyReply) => {
+    try {
+      await iotService.stopDiscovery();
+      
+      reply.send({
+        success: true,
+        message: 'Device discovery stopped'
+      });
+    } catch (error) {
+      logger.error('Error stopping discovery:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'Failed to stop discovery'
+      });
+    }
+  });
+
+  logger.info('IoT API routes registered');
+}

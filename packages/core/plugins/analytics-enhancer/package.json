@@ -1,0 +1,15 @@
+{
+  "name": "analytics-enhancer",
+  "version": "1.0.0",
+  "description": "Enhances analytics with additional metrics and reporting",
+  "main": "index.js",
+  "author": "UniMatrix",
+  "license": "MIT",
+  "keywords": ["plugin", "analytics", "metrics"],
+  "unimatrix": {
+    "plugin": true,
+    "minVersion": "1.0.0",
+    "hooks": ["request", "response", "analytics"],
+    "permissions": ["read", "write", "analytics"]
+  }
+}

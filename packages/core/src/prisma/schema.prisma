@@ -1,0 +1,347 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User management
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String?  @unique
+  firstName String?
+  lastName  String?
+  password  String
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLogin DateTime?
+
+  // User profile
+  profile   UserProfile?
+  
+  // API keys for programmatic access
+  apiKeys   ApiKey[]
+  
+  // User sessions
+  sessions  UserSession[]
+  
+  // AI conversations
+  conversations AiConversation[]
+  
+  // Blockchain wallets
+  wallets   BlockchainWallet[]
+  
+  // IoT devices
+  devices   IotDevice[]
+  
+  // File uploads
+  files     FileUpload[]
+  
+  // Chat conversations (as participant)
+  chatParticipations ConversationParticipant[]
+  
+  // Sent messages
+  sentMessages Message[]
+
+  @@map("users")
+}
+
+model UserProfile {
+  id       String  @id @default(cuid())
+  userId   String  @unique
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio      String?
+  avatar   String?
+  timezone String?
+  locale   String?
+  settings Json?
+  
+  @@map("user_profiles")
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+  
+  @@map("user_sessions")
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  key       String   @unique
+  isActive  Boolean  @default(true)
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  lastUsed  DateTime?
+  
+  @@map("api_keys")
+}
+
+// AI Module
+model AiConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  model     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  messages  AiMessage[]
+  
+  @@map("ai_conversations")
+}
+
+model AiMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           MessageRole
+  content        String
+  tokens         Int?
+  model          String?
+  createdAt      DateTime       @default(now())
+  
+  @@map("ai_messages")
+}
+
+// Blockchain Module
+model BlockchainWallet {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  address   String      @unique
+  network   String
+  balance   String?     // Stored as string to handle large numbers
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  
+  transactions Transaction[]
+  
+  @@map("blockchain_wallets")
+}
+
+model Transaction {
+  id        String            @id @default(cuid())
+  walletId  String
+  wallet    BlockchainWallet  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  hash      String            @unique
+  from      String
+  to        String
+  value     String
+  gasUsed   String?
+  gasPrice  String?
+  status    TransactionStatus
+  blockNumber String?
+  createdAt DateTime          @default(now())
+  
+  @@map("transactions")
+}
+
+// IoT Module
+model IotDevice {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  deviceId     String      @unique
+  deviceType   String
+  manufacturer String?
+  model        String?
+  firmware     String?
+  status       DeviceStatus @default(OFFLINE)
+  lastSeen     DateTime?
+  location     String?
+  metadata     Json?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  telemetry    IotTelemetry[]
+  commands     IotCommand[]
+  
+  @@map("iot_devices")
+}
+
+model IotTelemetry {
+  id        String    @id @default(cuid())
+  deviceId  String
+  device    IotDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  metric    String
+  value     Json
+  unit      String?
+  timestamp DateTime  @default(now())
+  
+  @@map("iot_telemetry")
+}
+
+model IotCommand {
+  id        String        @id @default(cuid())
+  deviceId  String
+  device    IotDevice     @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  command   String
+  payload   Json?
+  status    CommandStatus @default(PENDING)
+  sentAt    DateTime      @default(now())
+  executedAt DateTime?
+  response  Json?
+  
+  @@map("iot_commands")
+}
+
+// File Management
+model FileUpload {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  filename  String
+  originalName String
+  mimeType  String
+  size      Int
+  path      String
+  url       String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  
+  @@map("file_uploads")
+}
+
+// Chat/Messaging System
+model Conversation {
+  id        String   @id @default(cuid())
+  name      String?
+  type      ConversationType
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  metadata  String?  // JSON string
+  
+  participants ConversationParticipant[]
+  messages     Message[]
+  
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt       DateTime     @default(now())
+  leftAt         DateTime?
+  role           String?      // admin, member, etc.
+  
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content        String
+  messageType    MessageType  @default(TEXT)
+  metadata       String?      // JSON string
+  isEdited       Boolean      @default(false)
+  replyToId      String?
+  replyTo        Message?     @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies        Message[]    @relation("MessageReplies")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  @@map("messages")
+}
+
+// System Monitoring
+model SystemMetric {
+  id        String   @id @default(cuid())
+  metric    String
+  value     Float
+  unit      String?
+  tags      Json?
+  timestamp DateTime @default(now())
+  
+  @@map("system_metrics")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  resource  String
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  
+  @@map("audit_logs")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  USER
+  API_USER
+  GUEST
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  ERROR
+  MAINTENANCE
+}
+
+enum CommandStatus {
+  PENDING
+  SENT
+  EXECUTED
+  FAILED
+  TIMEOUT
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+  CHANNEL
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+}

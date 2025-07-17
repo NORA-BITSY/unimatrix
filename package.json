@@ -1,0 +1,60 @@
+{
+  "name": "unimatrix-workspace",
+  "version": "1.0.0",
+  "description": "UniMatrix - Universal AI, Blockchain, IoT Platform",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "setup": "node tools/scripts/setup.js",
+    "dev": "npm run dev:core & npm run dev:dashboard",
+    "dev:core": "npm run dev -w @matrix/core",
+    "dev:dashboard": "npm run dev -w @matrix/dashboard",
+    "dev:shared": "npm run dev -w @matrix/shared",
+    "build": "npm run build:shared && npm run build:core && npm run build:dashboard",
+    "build:shared": "npm run build -w @matrix/shared",
+    "build:core": "npm run build -w @matrix/core",
+    "build:dashboard": "npm run build -w @matrix/dashboard",
+    "build:production": "node tools/scripts/build-production.js",
+    "test": "npm run test -w @matrix/shared && npm run test -w @matrix/core && npm run test -w @matrix/dashboard",
+    "test:coverage": "npm run test:coverage -w @matrix/shared && npm run test:coverage -w @matrix/core",
+    "lint": "npm run lint -w @matrix/shared && npm run lint -w @matrix/core && npm run lint -w @matrix/dashboard",
+    "lint:fix": "npm run lint:fix -w @matrix/shared && npm run lint:fix -w @matrix/core && npm run lint:fix -w @matrix/dashboard",
+    "type-check": "npm run type-check -w @matrix/shared && npm run type-check -w @matrix/core && npm run type-check -w @matrix/dashboard",
+    "clean": "npm run clean -w @matrix/shared && npm run clean -w @matrix/core && npm run clean -w @matrix/dashboard",
+    "docker:build": "docker-compose -f docker/docker-compose.yml build",
+    "docker:dev": "docker-compose -f docker/docker-compose.dev.yml up",
+    "docker:prod": "docker-compose -f docker/docker-compose.yml up",
+    "deploy": "node tools/scripts/deploy.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "rimraf": "^5.0.5",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1",
+    "prompts": "^2.4.2",
+    "fs-extra": "^11.2.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "keywords": [
+    "ai",
+    "blockchain",
+    "iot",
+    "enterprise",
+    "platform",
+    "typescript",
+    "nodejs",
+    "vue",
+    "fastify"
+  ],
+  "author": "UniMatrix Team",
+  "license": "MIT"
+}
