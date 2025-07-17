@@ -57,12 +57,60 @@
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Node.js 18+ 
-- npm or yarn
-- Git
+### One-Command Installation
 
-### Installation
+**Linux/macOS:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/eplord/unimatrix/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/eplord/unimatrix/main/install.ps1" -OutFile "install.ps1"
+.\install.ps1
+```
+
+**Windows (Command Prompt):**
+```cmd
+curl -o install.bat https://raw.githubusercontent.com/eplord/unimatrix/main/install.bat
+install.bat
+```
+
+### Quick Usage
+
+After installation, start UniMatrix:
+
+**Development Mode:**
+```bash
+# Linux/macOS
+./start.sh
+
+# Windows
+quick-start.bat
+# or
+.\start.ps1
+```
+
+**Production Mode:**
+```bash
+# All platforms
+./start-production.sh   # Linux/macOS
+.\start-production.ps1  # Windows
+```
+
+**Access Points:**
+- 🎨 **Frontend Dashboard**: http://localhost:3002
+- 📊 **Backend API**: http://localhost:3001
+- 📖 **API Documentation**: http://localhost:3001/docs
+- ❤️ **Health Check**: http://localhost:3001/health
+
+**Default Login:**
+- **Email**: admin@unimatrix.dev
+- **Password**: admin123
+
+### Manual Installation
+
+If you prefer manual setup:
 
 ```bash
 # Clone the repository
@@ -145,6 +193,45 @@ unimatrix/
 - **Language**: TypeScript
 - **Utilities**: Common helpers, validators, security utils
 - **Types**: Shared interface definitions
+
+## 📦 Installation Scripts
+
+UniMatrix includes comprehensive installation automation for all major platforms:
+
+### Available Scripts
+
+| Script | Platform | Description |
+|--------|----------|-------------|
+| `install.sh` | Linux/macOS | Bash script with auto dependency management |
+| `install.ps1` | Windows | PowerShell script with Chocolatey integration |
+| `install.bat` | Windows | Batch script for fallback compatibility |
+
+### Features
+- ✅ **Automated Dependencies**: Node.js, Git, npm, PM2, TypeScript
+- ✅ **Package Managers**: apt/yum, Homebrew, Chocolatey integration
+- ✅ **Environment Setup**: Auto-generated JWT secrets and .env files
+- ✅ **Project Building**: Builds all TypeScript packages automatically
+- ✅ **Startup Scripts**: Creates platform-specific launch scripts
+- ✅ **Error Handling**: Comprehensive error checking and user guidance
+
+### Script Options
+
+**Linux/macOS (`install.sh`):**
+```bash
+./install.sh --install-path /custom/path --force --skip-deps
+```
+
+**Windows PowerShell (`install.ps1`):**
+```powershell
+.\install.ps1 -InstallPath "C:\UniMatrix" -Force -SkipDependencies
+```
+
+**Windows Batch (`install.bat`):**
+```cmd
+install.bat --force --skip-deps
+```
+
+For detailed installation instructions, see [INSTALLATION.md](INSTALLATION.md).
 
 ## 🎯 Key Features Highlight
 
@@ -255,6 +342,54 @@ ETHEREUM_RPC_URL="your-ethereum-rpc"
 POLYGON_RPC_URL="your-polygon-rpc"
 BSC_RPC_URL="your-bsc-rpc"
 ```
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+#### Port Conflicts
+```bash
+# Check what's using ports 3001/3002
+lsof -i :3001    # Linux/macOS
+netstat -an | find ":3001"  # Windows
+
+# Kill processes if needed
+sudo lsof -ti:3001 | xargs kill -9  # Linux/macOS
+taskkill /F /PID <PID>               # Windows
+```
+
+#### Node.js Version Issues
+```bash
+# Check current version
+node --version
+
+# Update Node.js
+# Linux/macOS: Use nvm or package manager
+# Windows: Download from nodejs.org or use chocolatey
+choco upgrade nodejs  # Windows with Chocolatey
+```
+
+#### Dependency Issues
+```bash
+# Clean install
+rm -rf node_modules package-lock.json  # Linux/macOS
+rmdir /s node_modules & del package-lock.json  # Windows
+
+# Reinstall
+npm install
+```
+
+#### Permission Issues
+```bash
+# Linux/macOS - Fix npm permissions
+sudo chown -R $(whoami) ~/.npm
+sudo chown -R $(whoami) /usr/local/lib/node_modules
+
+# Windows - Run as Administrator
+Right-click PowerShell → "Run as Administrator"
+```
+
+For more troubleshooting help, see [INSTALLATION.md](INSTALLATION.md).
 
 ## 🤝 Contributing
 
